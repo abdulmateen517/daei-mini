@@ -18,6 +18,7 @@ class DailyReport extends Model
         'habit_stats',
         'activities',
         'finalized_at',
+        'work_summary', 'challenges', 'learning', 'rating', 'reflection', 'review_status',
     ];
 
     protected $casts = [
@@ -26,10 +27,18 @@ class DailyReport extends Model
         'habit_stats' => 'array',
         'activities' => 'array',
         'finalized_at' => 'immutable_datetime',
+        'rating' => 'integer',
     ];
+    protected $appends = ['completion_percentage'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function feedback() { return $this->hasMany(DailyReportFeedback::class)->with('admin')->latest(); }
+    public function getCompletionPercentageAttribute(): int
+    {
+        return $this->total_activities ? (int) round($this->completed_activities * 100 / $this->total_activities) : 0;
     }
 }
