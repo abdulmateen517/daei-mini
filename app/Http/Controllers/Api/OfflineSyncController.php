@@ -17,7 +17,7 @@ class OfflineSyncController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.type' => ['required', Rule::in(['timetable', 'journal'])],
+            'items.*.type' => ['required', Rule::in(['activity', 'timetable', 'journal'])],
             'items.*.client_id' => ['nullable', 'string', 'max:100', 'required_without:items.*.uuid'],
             'items.*.uuid' => ['nullable', 'string', 'max:100', 'required_without:items.*.client_id'],
             'items.*.created_at' => ['required', 'date'],
@@ -71,22 +71,12 @@ class OfflineSyncController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if ($record && $item['action'] === 'create') {
-                    abort_if(
-                        $record->type !== $item['type'],
-                        409,
-                        'The client_id is already registered for a different record type.'
-                    );
-
-                    return 'already_synced';
-                }
-
                 if ($record) {
-                    abort_if(
-                        $record->type !== $item['type'],
-                        409,
-                        'The client_id is already registered for a different record type.'
-                    );
+                    $this->ensureRecordTypeMatches($record, $item);
+
+                    if ($item['action'] === 'create') {
+                        return 'already_synced';
+                    }
 
                     $record->fill([
                         'data' => $item['data'],
@@ -113,14 +103,16 @@ class OfflineSyncController extends Controller
                 throw $exception;
             }
 
-            $recordExists = OfflineSyncRecord::query()
+            $record = OfflineSyncRecord::query()
                 ->where('user_id', $userId)
                 ->where('client_id', $clientId)
-                ->exists();
+                ->first();
 
-            if (! $recordExists) {
+            if (! $record) {
                 throw $exception;
             }
+
+            $this->ensureRecordTypeMatches($record, $item);
 
             if ($item['action'] === 'create') {
                 return 'already_synced';
@@ -133,11 +125,7 @@ class OfflineSyncController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                abort_if(
-                    $record->type !== $item['type'],
-                    409,
-                    'The client_id is already registered for a different record type.'
-                );
+                $this->ensureRecordTypeMatches($record, $item);
 
                 $record->fill([
                     'data' => $item['data'],
@@ -147,5 +135,14 @@ class OfflineSyncController extends Controller
 
             return 'synced';
         }
+    }
+
+    private function ensureRecordTypeMatches(OfflineSyncRecord $record, array $item): void
+    {
+        abort_if(
+            $record->type !== $item['type'],
+            409,
+            'The client_id is already registered for a different record type.'
+        );
     }
 }
