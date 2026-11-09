@@ -13,6 +13,10 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable, MustVerifyEmailTrait;
 
+    public const ROLE_USER = 'user';
+
+    public const ROLE_ADMIN = 'admin';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,10 +28,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'is_admin',
         'status',
+        'role',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * The attributes that should be hidden.
      *
      * @var list<string>
      */
@@ -47,6 +52,18 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_admin' => 'boolean',
     ];
 
-    public function groups() { return $this->belongsToMany(Group::class)->withTimestamps(); }
-    public function dailyReports() { return $this->hasMany(DailyReport::class); }
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class)->withTimestamps();
+    }
+
+    public function dailyReports()
+    {
+        return $this->hasMany(DailyReport::class);
+    }
 }
