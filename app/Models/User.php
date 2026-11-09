@@ -26,10 +26,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'is_admin',
+        'status',
+        'role',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * The attributes that should be hidden.
      *
      * @var list<string>
      */
@@ -46,10 +49,21 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_admin' => 'boolean',
     ];
 
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class)->withTimestamps();
+    }
+
+    public function dailyReports()
+    {
+        return $this->hasMany(DailyReport::class);
     }
 }
